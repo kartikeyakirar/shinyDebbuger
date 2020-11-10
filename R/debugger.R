@@ -28,8 +28,8 @@ add_debugger_dir <- function(input_dir, output_dir = NULL) {
         }
     }
 
-    filePaths <- list.files(input_dir,pattern = "(?i).R$",all.files = TRUE,full.names = TRUE,recursive = TRUE)
-
+    filePaths <- list.files(input_dir, pattern = "(?i).R$", all.files = TRUE, full.names = TRUE, recursive = TRUE)
+    add_global_parameter(input_dir)
     for(filePath in filePaths) {
         add_debugger_file(filePath, input_dir, output_dir)
     }

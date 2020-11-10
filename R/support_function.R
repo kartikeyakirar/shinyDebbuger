@@ -17,7 +17,6 @@ find_function_index <- function(code) {
 }
 
 getFunctionName <- function(function_index, code, funcType) {
-
     if(funcType == "function") {
         sapply(function_index, function(x) {
             funName <- trimws(stringi::stri_extract(code[x],regex = ".*(?=<-)|.*(?==)"))
@@ -25,12 +24,11 @@ getFunctionName <- function(function_index, code, funcType) {
                 paramNames <-  strsplit(gsub(".*\\((.*)\\).*", "\\1", code[x]), ",")[[1]]
 
                 if(length(paramNames) > 0) {
-                    megTxt <- glue::glue("    message('function:{funName}:    [{paramNames}]')", .transformer = parameter_transformer(debug = TRUE))
+                    megTxt <- glue::glue("if(global_debugger) message('function:{funName}:    [{paramNames}]')", .transformer = parameter_transformer(debug = TRUE))
                 } else {
-                    megTxt <- glue::glue("    message('function:{funName}')", .transformer = parameter_transformer(debug = TRUE))
+                    megTxt <- glue::glue("if(global_debugger) message('function:{funName}')", .transformer = parameter_transformer(debug = TRUE))
 
                 }
-
                 names(megTxt) <- as.character(x)
                 megTxt
             }
@@ -40,7 +38,7 @@ getFunctionName <- function(function_index, code, funcType) {
         sapply(function_index, function(x) {
             funName <- gsub("observeEvent(", "", trimws(stringi::stri_extract(code[x],regex = ".*(?=,)")), fixed = TRUE)
             if (!is.na(funName)) {
-                megTxt <- glue::glue("    message('observeEvent:{funName}')", .transformer = parameter_transformer(debug = TRUE))
+                megTxt <- glue::glue("if(global_debugger) message('observeEvent:{funName}')", .transformer = parameter_transformer(debug = TRUE))
                 names(megTxt) <- as.character(x)
                 megTxt
             }
@@ -49,7 +47,7 @@ getFunctionName <- function(function_index, code, funcType) {
         sapply(function_index, function(x) {
             funName <- trimws(stringi::stri_extract(code[x],regex = ".*(?=<-)|.*(?==)"))
             if (!is.na(funName)) {
-                megTxt <- glue::glue("    message('reactive:{funName}')", .transformer = parameter_transformer(debug = TRUE))
+                megTxt <- glue::glue("if(global_debugger) message('reactive:{funName}')", .transformer = parameter_transformer(debug = TRUE))
 
 
                 names(megTxt) <- as.character(x)
@@ -58,10 +56,10 @@ getFunctionName <- function(function_index, code, funcType) {
         })
     } else if(funcType == "renderUI") {
         sapply(function_index, function(x) {
-            if (!is.na(funName)) {
+            if (!is.na(x)) {
                 funName <- trimws(stringi::stri_extract(code[x],regex = ".*(?=<-)|.*(?==)"))
 
-                megTxt <- glue::glue("    message('renderUI:{funName}')", .transformer = parameter_transformer(debug = TRUE))
+                megTxt <- glue::glue("if(global_debugger) message('renderUI:{funName}')", .transformer = parameter_transformer(debug = TRUE))
 
 
                 names(megTxt) <- as.character(x)
@@ -79,6 +77,25 @@ insert_message <- function(code, function_messages) {
         incr<- incr+1
     }
     code
+}
+
+add_global_parameter <- function(input_dir) {
+    if(!file.exists(paste0(input_dir,"/global.R"))) {
+        file.create(paste0(input_dir,"/global.R"))
+        updated_code <- "global_debugger <- TRUE"
+        writeLines(updated_code, paste0(input_dir,"/global.R"))
+    } else {
+        file.create(paste0(input_dir,"global_debugger.R"))
+        updated_code <- "global_debugger <- TRUE"
+        writeLines(updated_code, paste0(input_dir,"/global_debugger.R"))
+
+        code_file <- readLines(paste0(input_dir,"/global.R"))
+        updated_code <- paste0("source('global_debugger.R', local = TRUE)")
+        code_file <- c(updated_code, code_file)
+        writeLines(code_file, paste0(input_dir,"/global.R"))
+    }
+    message("Added global parameter for debugger package.")
+
 }
 
 parameter_transformer <- function(debug = FALSE) {
